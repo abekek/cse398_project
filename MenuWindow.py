@@ -10,6 +10,8 @@ from PyQt6.QtWidgets import (
     QLabel,
 )
 
+from LeftKeyboard import LeftKeyboard
+
 class MenuWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -33,6 +35,7 @@ class MenuWindow(QMainWindow):
         button_left.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         button_left.setStyleSheet(button_style)
         layout.addWidget(button_left, 0, 0)
+        button_left.clicked.connect(self.show_left_keyboard)
 
         button_right = QPushButton("Right")
         button_right.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
@@ -45,3 +48,7 @@ class MenuWindow(QMainWindow):
   
         # show all the widgets
         self.show()
+
+    def show_left_keyboard(self):
+        self.left_keyboard = LeftKeyboard()
+        self.left_keyboard.show()
