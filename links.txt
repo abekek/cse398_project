@@ -1,0 +1,9 @@
+https://arxiv.org/ftp/arxiv/papers/2106/2106.07554.pdf
+
+https://www.twine.net/blog/best-eye-tracking-datasets/
+
+https://www.nature.com/articles/s41597-022-01200-0
+
+https://www.kaggle.com/c/mp18-eye-gaze-estimation
+
+https://gazecapture.csail.mit.edu/
