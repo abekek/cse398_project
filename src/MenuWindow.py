@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import dlib
 from math import hypot
+# from gaze_tracking import GazeTracking
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -17,7 +18,8 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
 )
 
-from LeftKeyboard import LeftKeyboard
+import pyttsx3
+
 
 class MenuWindow(QMainWindow):
     def __init__(self):
@@ -31,11 +33,14 @@ class MenuWindow(QMainWindow):
 
         self.font = cv2.FONT_HERSHEY_PLAIN
 
+        engine = pyttsx3.init()
+
         # to open webcab to capture the image
         cap = cv2.VideoCapture(0)
 
         self.frames = 0
-        self.keyboard_selection_frames = 0
+        self.right_keyboard_selection_frames = 0
+        self.left_keyboard_selection_frames = 0
         self.keyboard_selected = "none"
   
         # set the title
@@ -69,7 +74,7 @@ class MenuWindow(QMainWindow):
                 "Z", "X", "C", "V", "B", "N", "M",
                 "Enter", "Space", "Delete"]
 
-        self.layoutKeyboard = self.constructKeyboard(self.keys)
+        self.layoutKeyboard, leftKeyboard, rightKeyboard = self.constructKeyboard(self.keys)
 
         self.main_layout.addLayout(self.layoutKeyboard)
         
@@ -112,44 +117,63 @@ class MenuWindow(QMainWindow):
                 print(gaze_ratio)
 
                 if len(keys_copy) == 1:
+                    engine.say(keys_copy[0])
+                    engine.runAndWait()
                     self.input_text += keys_copy[0]
                     self.input_field.setText(self.input_text)
                     keys_copy = self.keys.copy()
                     self.keyboard_selected = "none"
-                    self.keyboard_selection_frames = 0
-                    self.layoutKeyboard = self.constructKeyboard(keys_copy)
-                    self.main_layout.itemAt(1).setParent(None)
-                    # self.main_layout.addLayout(self.layoutKeyboard)
+                    self.right_keyboard_selection_frames = 0
+                    self.left_keyboard_selection_frames = 0
                 
                 if gaze_ratio <= 0.5:
                     self.keyboard_selected = "right"
-                    self.keyboard_selection_frames += 1
+                    self.right_keyboard_selection_frames += 1
                     # If Kept gaze on one side more than 15 frames, move to keyboard
-                    if self.keyboard_selection_frames == 20:
-                        print("left")
-                        keys_copy = keys_copy[:len(self.keys) // 2]
-                        self.layoutKeyboard = self.constructKeyboard(keys_copy)
-                        self.frames = 0
-                        self.keyboard_selection_frames = 0
-                        self.main_layout.itemAt(1).setParent(None)
-                        self.main_layout.addLayout(self.layoutKeyboard)
-                                
-                elif gaze_ratio >= 1.0:
-                    self.keyboard_selected = "left"
-                    self.keyboard_selection_frames += 1
-                    # If Kept gaze on one side more than 15 frames, move to keyboard
-                    if self.keyboard_selection_frames == 20:
+                    if self.right_keyboard_selection_frames == 5:
                         print("right")
                         keys_copy = keys_copy[len(keys_copy) // 2:]
-                        self.layoutKeyboard = self.constructKeyboard(keys_copy)
+                        print(keys_copy)
                         self.frames = 0
-                        self.keyboard_selection_frames = 0
-                        self.main_layout.itemAt(1).setParent(None)
-                        self.main_layout.addLayout(self.layoutKeyboard)
+                        self.right_keyboard_selection_frames = 0
+                        self.left_keyboard_selection_frames = 0
+                        
+                        text = ""
+                        for i in range(len(keys_copy) // 2):
+                            text += keys_copy[i] + " "
+                        leftKeyboard.setText(text)
+                        
+                        text = ""
+                        for i in range(len(keys_copy) // 2, len(keys_copy)):
+                            text += keys_copy[i] + " "
+                        rightKeyboard.setText(text)
+                                
+                elif gaze_ratio >= 2.0 and gaze_ratio <= 3.0:
+                    self.keyboard_selected = "left"
+                    self.left_keyboard_selection_frames += 1
+                    # If Kept gaze on one side more than 15 frames, move to keyboard
+                    if self.left_keyboard_selection_frames == 5:
+                        print("left")
+                        keys_copy = keys_copy[:len(keys_copy) // 2]
+                        print(keys_copy)
+                        self.frames = 0
+                        self.left_keyboard_selection_frames = 0
+                        self.right_keyboard_selection_frames = 0
+                        
+                        text = ""
+                        for i in range(len(keys_copy) // 2):
+                            text += keys_copy[i] + " "
+                        leftKeyboard.setText(text)
+                        
+                        text = ""
+                        for i in range(len(keys_copy) // 2, len(keys_copy)):
+                            text += keys_copy[i] + " "
+                        rightKeyboard.setText(text)
 
                 else:
                     self.keyboard_selected = "none"
-                    self.keyboard_selection_frames = 0
+                    self.left_keyboard_selection_frames = 0
+                    self.right_keyboard_selection_frames = 0
                     print("none")
             
             self.show()
@@ -168,30 +192,40 @@ class MenuWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
 
-        leftKeyboard = QGridLayout()
+        # leftKeyboard = QGridLayout()
+        leftKeyboard = QLabel()
         leftKeyboard.setContentsMargins(0, 150, 20, 150)
 
         buttons = []
+        leftText = ""
         for k in range(len(keys) // 2 + 1):
-            buttons.append(QPushButton(keys[k]))
-            buttons[k].setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-            buttons[k].setStyleSheet(self.button_style)
-            leftKeyboard.addWidget(buttons[k], k // 10, k % 10)
+            # buttons.append(QPushButton(keys[k]))
+            # buttons[k].setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            # buttons[k].setStyleSheet(self.button_style)
+            # leftKeyboard.addWidget(buttons[k], k // 10, k % 10)
+            leftText += keys[k] + " "
+            leftKeyboard.setText(leftText)
 
-        layout.addLayout(leftKeyboard)
+        # layout.addLayout(leftKeyboard)
+        layout.addWidget(leftKeyboard)
 
-        rightKeyboard = QGridLayout()
+        # rightKeyboard = QGridLayout()
+        rightKeyboard = QLabel()
         rightKeyboard.setContentsMargins(20, 150, 0, 150)
 
+        rightText = ""
         for k in range(len(keys) // 2 + 1, len(keys)):
-            buttons.append(QPushButton(keys[k]))
-            buttons[k].setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-            buttons[k].setStyleSheet(self.button_style)
-            rightKeyboard.addWidget(buttons[k], k // 10, k % 10)
+            # buttons.append(QPushButton(keys[k]))
+            # buttons[k].setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            # buttons[k].setStyleSheet(self.button_style)
+            # rightKeyboard.addWidget(buttons[k], k // 10, k % 10)
+            rightText += keys[k] + " "
+            rightKeyboard.setText(rightText)
 
-        layout.addLayout(rightKeyboard)
+        # layout.addLayout(rightKeyboard)
+        layout.addWidget(rightKeyboard)
 
-        return layout
+        return layout, leftKeyboard, rightKeyboard
 
     def get_gaze_ratio(self, eye_points, facial_landmarks):
         # Gaze detection
@@ -257,8 +291,3 @@ class MenuWindow(QMainWindow):
 
     def midpoint(self, p1 ,p2):
         return int((p1.x + p2.x)/2), int((p1.y + p2.y)/2)
-
-
-    def show_left_keyboard(self):
-        self.left_keyboard = LeftKeyboard()
-        self.left_keyboard.show()
