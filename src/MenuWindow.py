@@ -76,6 +76,9 @@ class MenuWindow(QMainWindow):
 
         self.layoutKeyboard, leftKeyboard, rightKeyboard = self.constructKeyboard(self.keys)
 
+        leftKeyboard.setStyleSheet("QLabel {color: black; font-size: 20px; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
+        rightKeyboard.setStyleSheet("QLabel {color: black; font-size: 20px; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
+
         self.main_layout.addLayout(self.layoutKeyboard)
         
         self.widget.setLayout(self.main_layout)
@@ -125,12 +128,23 @@ class MenuWindow(QMainWindow):
                     self.keyboard_selected = "none"
                     self.right_keyboard_selection_frames = 0
                     self.left_keyboard_selection_frames = 0
+                    
+                    text = ""
+                    for i in range(len(keys_copy) // 2):
+                        text += keys_copy[i] + " "
+                    leftKeyboard.setText(text)
+                    
+                    text = ""
+                    for i in range(len(keys_copy) // 2, len(keys_copy)):
+                        text += keys_copy[i] + " "
+                    rightKeyboard.setText(text)
+
                 
                 if gaze_ratio <= 0.5:
                     self.keyboard_selected = "right"
                     self.right_keyboard_selection_frames += 1
                     # If Kept gaze on one side more than 15 frames, move to keyboard
-                    if self.right_keyboard_selection_frames == 5:
+                    if self.right_keyboard_selection_frames == 7:
                         print("right")
                         keys_copy = keys_copy[len(keys_copy) // 2:]
                         print(keys_copy)
@@ -152,7 +166,7 @@ class MenuWindow(QMainWindow):
                     self.keyboard_selected = "left"
                     self.left_keyboard_selection_frames += 1
                     # If Kept gaze on one side more than 15 frames, move to keyboard
-                    if self.left_keyboard_selection_frames == 5:
+                    if self.left_keyboard_selection_frames == 7:
                         print("left")
                         keys_copy = keys_copy[:len(keys_copy) // 2]
                         print(keys_copy)
