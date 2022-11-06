@@ -1,3 +1,5 @@
+from asyncio import sleep
+import math
 import sys
 import cv2
 import numpy as np
@@ -19,110 +21,169 @@ from PyQt6.QtWidgets import (
 )
 
 import pyttsx3
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+matplotlib.interactive(True)
+import mediapipe as mp
 
+
+LEFT_IRIS = [474,475, 476, 477]
+RIGHT_IRIS = [469, 470, 471, 472]
 
 class MenuWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        # we used the detector to detect the frontal face
-        self.detector = dlib.get_frontal_face_detector()
+        mp_face_mesh = mp.solutions.face_mesh
 
-        # it will dectect the facial landwark points 
-        self.predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+        with mp_face_mesh.FaceMesh(
+            max_num_faces=1,
+            refine_landmarks=True,
+            min_detection_confidence=0.6,
+            min_tracking_confidence=0.8
+        ) as face_mesh:
 
-        self.font = cv2.FONT_HERSHEY_PLAIN
+            # we used the detector to detect the frontal face
+            # self.detector = dlib.get_frontal_face_detector()
 
-        engine = pyttsx3.init()
+            # it will dectect the facial landwark points 
+            # self.predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
-        # to open webcab to capture the image
-        cap = cv2.VideoCapture(0)
+            self.font = cv2.FONT_HERSHEY_PLAIN
 
-        self.frames = 0
-        self.right_keyboard_selection_frames = 0
-        self.left_keyboard_selection_frames = 0
-        self.keyboard_selected = "none"
-  
-        # set the title
-        self.setWindowTitle("Main Menu")
+            engine = pyttsx3.init()
 
-        self.input_text = ""
-  
-        width = 1200
-        height = 800
+            # to open webcab to capture the image
+            cap = cv2.VideoCapture(0)
 
-        self.button_style = "QPushButton {color: black; font-size: 20px; font-weight: bold;}"
+            self.frames = 0
+            self.right_keyboard_selection_frames = 0
+            self.left_keyboard_selection_frames = 0
+            self.keyboard_selected = "none"
+    
+            # set the title
+            self.setWindowTitle("Main Menu")
 
-        # setting  the fixed width of window
-        self.setFixedWidth(width)
-        self.setFixedHeight(height)
+            self.input_text = ""
+    
+            width = 1200
+            height = 800
 
-        self.main_layout = QVBoxLayout()
-        self.main_layout.setContentsMargins(10, 250, 10, 10)
-        self.main_layout.setSpacing(0)
+            self.button_style = "QPushButton {color: black; font-size: 20px; font-weight: bold;}"
 
-        self.input_field = QLineEdit()
-        self.input_field.setStyleSheet("QLineEdit {color: black; font-size: 20px; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
+            # setting  the fixed width of window
+            self.setFixedWidth(width)
+            self.setFixedHeight(height)
 
-        self.main_layout.addWidget(self.input_field)
+            self.main_layout = QVBoxLayout()
+            self.main_layout.setContentsMargins(10, 250, 10, 10)
+            self.main_layout.setSpacing(0)
 
-        self.widget = QWidget()
+            self.input_field = QLineEdit()
+            self.input_field.setStyleSheet("QLineEdit {color: black; font-size: 20px; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
 
-        self.keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
-                "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P",
-                "A", "S", "D", "F", "G", "H", "J", "K", "L",
-                "Z", "X", "C", "V", "B", "N", "M",
-                "Enter", "Space", "Delete"]
+            self.main_layout.addWidget(self.input_field)
 
-        self.layoutKeyboard, leftKeyboard, rightKeyboard = self.constructKeyboard(self.keys)
+            self.widget = QWidget()
 
-        leftKeyboard.setStyleSheet("QLabel {color: black; font-size: 20px; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
-        rightKeyboard.setStyleSheet("QLabel {color: black; font-size: 20px; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
+            self.keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
+                    "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P",
+                    "A", "S", "D", "F", "G", "H", "J", "K", "L",
+                    "Z", "X", "C", "V", "B", "N", "M",
+                    "Enter", "Space", "Delete"]
 
-        self.main_layout.addLayout(self.layoutKeyboard)
-        
-        self.widget.setLayout(self.main_layout)
+            self.layoutKeyboard, leftKeyboard, rightKeyboard = self.constructKeyboard(self.keys)
 
-        self.setCentralWidget(self.widget)
+            leftKeyboard.setStyleSheet("QLabel {color: black; font-size: 20px; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
+            rightKeyboard.setStyleSheet("QLabel {color: black; font-size: 20px; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
 
-        keys_copy = self.keys.copy()
-  
-        # show all the widgets
-        # self.show()
+            self.main_layout.addLayout(self.layoutKeyboard)
+            
+            self.widget.setLayout(self.main_layout)
 
-        while True:
-            _, self.frame = cap.read()
-            # rows, cols, _ = self.frame.shape
-            self.frames += 1
+            self.setCentralWidget(self.widget)
 
-            #change the color of the frame captured by webcam to grey
-            self.gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+            keys_copy = self.keys.copy()
+    
+            # show all the widgets
+            # self.show()
 
-            # to detect faces from grey color frame
-            faces = self.detector(self.gray)
-            for face in faces:
+            self.previous_direction = "none"
+            amount_straight_events = 0
+
+            while True:
+                _, self.frame = cap.read()
+                self.frame = cv2.flip(self.frame, 1)
+                self.rgb_frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+                # rows, cols, _ = self.frame.shape
+                self.frames += 1
+
+                #change the color of the frame captured by webcam to grey
+                # self.gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+
+                # to detect faces from grey color frame
+                # faces = self.detector(self.gray)
+
+                results = face_mesh.process(self.rgb_frame)
                 
-                #to detect the landmarks of a face
-                landmarks = self.predictor(self.gray, face)
-                
-                left_eye, right_eye = self.eyes_contour_points(landmarks)
-                
-                # Eyes color
-                # right now colo red around eyes cause we are not blinking them
-                cv2.polylines(self.frame, [left_eye], True, (0, 0, 255), 2)
-                cv2.polylines(self.frame, [right_eye], True, (0, 0, 255), 2)
-                
-                #Detecting gaze to select left or right keybaord.
-                gaze_ratio_left_eye = self.get_gaze_ratio([36, 37, 38, 39, 40, 41], landmarks)
-                gaze_ratio_right_eye = self.get_gaze_ratio([42, 43, 44, 45, 46, 47], landmarks)
-                gaze_ratio = (gaze_ratio_right_eye + gaze_ratio_left_eye) / 2
+                #getting width and height of frame
+                img_h, img_w = self.frame.shape[:2]
 
-                print(gaze_ratio)
+                # print(np.array([np.multiply([p.x, p.y], [img_w, img_h]).astype(int) for p in results.multi_face_landmarks[0].landmark]))
+                mesh_points=np.array([np.multiply([p.x, p.y], [img_w, img_h]).astype(int) for p in results.multi_face_landmarks[0].landmark])
+                # print('Test')
+
+                (l_cx, l_cy), l_radius = cv2.minEnclosingCircle(mesh_points[LEFT_IRIS])
+                (r_cx, r_cy), r_radius = cv2.minEnclosingCircle(mesh_points[RIGHT_IRIS])
+                
+                # turn center points into np array 
+                center_left = np.array((l_cx, l_cy), dtype=np.int32)
+                center_right = np.array((r_cx, r_cy), dtype=np.int32)
+
+                cv2.circle(self.frame, tuple(center_left), int(l_radius), (255,0,255), 2, cv2.LINE_AA)
+                cv2.circle(self.frame, tuple(center_right), int(r_radius), (255,0,255), 2, cv2.LINE_AA)
+
+                face_bottom_left = mesh_points[149] # bottom left corner of face
+                face_bottom_right = mesh_points[378]
+                face_top_left = mesh_points[67]
+                face_top_right = mesh_points[297] # top right corner of face
+                
+                face_bottom_left_x = img_w - face_bottom_right[0]
+                # face_bottom_left_y = face_bottom_right[1]
+
+                face_bottom_right_x = img_w - face_bottom_left[0] # bottom right corner of face
+                # face_bottom_right_y = face_bottom_left[1] # bottom right corner of face
+
+                face_top_right_x = img_w - face_top_left[0]
+                # face_top_right_y = face_top_left[1]
+
+                face_top_left_x = img_w - face_top_right[0]
+                # face_top_left_y = face_top_right[1]
+
+                position_left_iris_x = img_w - l_cx
+                position_right_iris_x = img_w - r_cx
+
+                print('Left iris: ' + str(position_left_iris_x))
+                print('Right iris: ' + str(position_right_iris_x))
+
+                print('Top right X: ' +  str(face_top_right_x))
+                print('Bottom left X: ' +  str(face_bottom_left_x))
+
+                normalized_position_left_iris_x = self.normalize(position_left_iris_x, face_top_right_x, face_bottom_left_x)
+                normalized_position_right_iris_x = self.normalize(position_right_iris_x, face_top_left_x, face_bottom_right_x)
+
+                normalized_position_iris_x = (normalized_position_left_iris_x + normalized_position_right_iris_x) / 2.0
+
+                print(normalized_position_iris_x)
 
                 if len(keys_copy) == 1:
                     engine.say(keys_copy[0])
                     engine.runAndWait()
-                    self.input_text += keys_copy[0]
+                    if keys_copy[0] == "Delete":
+                        self.input_text = self.input_text[:-1]
+                    else:
+                        self.input_text += keys_copy[0]
                     self.input_field.setText(self.input_text)
                     keys_copy = self.keys.copy()
                     self.keyboard_selected = "none"
@@ -140,11 +201,32 @@ class MenuWindow(QMainWindow):
                     rightKeyboard.setText(text)
 
                 
-                if gaze_ratio <= 0.5:
+                if normalized_position_iris_x > 0.09:
                     self.keyboard_selected = "right"
-                    self.right_keyboard_selection_frames += 1
-                    # If Kept gaze on one side more than 15 frames, move to keyboard
-                    if self.right_keyboard_selection_frames == 7:
+
+                        # sleep(0.5) # To avoid multiple selection of same key
+                                
+                elif normalized_position_iris_x < 0.01:
+                    self.keyboard_selected = "left"
+
+                        # sleep(0.5) # To avoid multiple selection of same key
+
+                else:
+                    amount_straight_events += 1
+                    if amount_straight_events > 8:
+                        # self.previous_direction = "none"
+                        self.keyboard_selected = "none"
+                        # self.left_keyboard_selection_frames = 0
+                        # self.right_keyboard_selection_frames = 0
+                        amount_straight_events = 0
+                    print("none")
+
+                if self.keyboard_selected == "right":
+                    if self.previous_direction != self.keyboard_selected:
+                        self.keyboard_selected = "right"
+                        self.right_keyboard_selection_frames += 1
+                        # If Kept gaze on one side more than 15 frames, move to keyboard
+                        # if self.right_keyboard_selection_frames == 1:
                         print("right")
                         keys_copy = keys_copy[len(keys_copy) // 2:]
                         print(keys_copy)
@@ -161,12 +243,15 @@ class MenuWindow(QMainWindow):
                         for i in range(len(keys_copy) // 2, len(keys_copy)):
                             text += keys_copy[i] + " "
                         rightKeyboard.setText(text)
-                                
-                elif gaze_ratio >= 2.0 and gaze_ratio <= 3.0:
-                    self.keyboard_selected = "left"
-                    self.left_keyboard_selection_frames += 1
-                    # If Kept gaze on one side more than 15 frames, move to keyboard
-                    if self.left_keyboard_selection_frames == 7:
+
+                        self.previous_direction = self.keyboard_selected
+
+                elif self.keyboard_selected == "left":
+                    if self.previous_direction != self.keyboard_selected:
+                        self.keyboard_selected = "left"
+                        self.left_keyboard_selection_frames += 1
+                        # If Kept gaze on one side more than 15 frames, move to keyboard
+                        # if self.left_keyboard_selection_frames == 1:
                         print("left")
                         keys_copy = keys_copy[:len(keys_copy) // 2]
                         print(keys_copy)
@@ -184,22 +269,25 @@ class MenuWindow(QMainWindow):
                             text += keys_copy[i] + " "
                         rightKeyboard.setText(text)
 
-                else:
-                    self.keyboard_selected = "none"
-                    self.left_keyboard_selection_frames = 0
-                    self.right_keyboard_selection_frames = 0
-                    print("none")
-            
-            self.show()
-            cv2.imshow("Frame", self.frame)
+                        self.previous_direction = self.keyboard_selected
 
-            key = cv2.waitKey(1)
-            #close the webcam when escape key is pressed
-            if key == 27:
-                break
+                elif self.keyboard_selected == "none":
+                    self.previous_direction = self.keyboard_selected
+                
+                self.show()
+                cv2.imshow("Frame", self.frame)
+                # cv2.imshow("RGB Frame", self.rgb_frame)
 
-        cap.release()
-        cv2.destroyAllWindows()
+                key = cv2.waitKey(1)
+                #close the webcam when escape key is pressed
+                if key == 27:
+                    break
+
+            cap.release()
+            cv2.destroyAllWindows()
+
+    def normalize(self, val, maxVal, minVal):
+        return max(0, min(1, (val - minVal) / (maxVal - minVal)))
 
     def constructKeyboard(self, keys):
         layout = QHBoxLayout()
