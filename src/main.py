@@ -5,12 +5,13 @@ from PyQt6.QtWidgets import (
 )
 
 from MenuWindow import MenuWindow
+from SelectionWindow import SelectionWindow
 
 # create pyqt5 app
 app = QApplication([])
   
 # create the instance of our Window
-window = MenuWindow()
+window = SelectionWindow()
   
 # start the app
 sys.exit(app.exec())
