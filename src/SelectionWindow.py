@@ -1,4 +1,5 @@
-from MenuWindow import MenuWindow
+from LeftWindow import LeftWindow
+from RightWindow import RightWindow
 from PyQt6.QtWidgets import (
     QApplication,
     QGridLayout,
@@ -30,12 +31,12 @@ class SelectionWindow(QMainWindow):
         self.main_layout.setContentsMargins(10, 250, 10, 10)
         self.main_layout.setSpacing(0)
 
-        self.left_button = QPushButton("Calibration-Free\n(lower precision)")
+        self.left_button = QPushButton("Handcrafted Method\n(lower precision)")
         self.left_button.setStyleSheet(self.button_style)
         self.left_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.left_button.clicked.connect(self.left_button_clicked)
 
-        self.right_button = QPushButton("Calibration\n(higher precision)")
+        self.right_button = QPushButton("Neural Network\n(higher precision)")
         self.right_button.setStyleSheet(self.button_style)
         self.right_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.right_button.clicked.connect(self.right_button_clicked)
@@ -51,9 +52,10 @@ class SelectionWindow(QMainWindow):
 
     def left_button_clicked(self):
         # open the menu window
-        self.menu_window = MenuWindow()
+        self.menu_window = LeftWindow()
         self.menu_window.show()
 
     def right_button_clicked(self):
-        print("Right button clicked")
+        self.menu_window = RightWindow()
+        self.menu_window.show()
         

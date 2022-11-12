@@ -4,7 +4,6 @@ from PyQt6.QtWidgets import (
     QApplication,
 )
 
-from MenuWindow import MenuWindow
 from SelectionWindow import SelectionWindow
 
 # create pyqt5 app
