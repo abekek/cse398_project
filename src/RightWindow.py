@@ -64,6 +64,8 @@ class RightWindow(QMainWindow):
 
         self.widget = QWidget()
 
+        engine = pyttsx3.init()
+
         self.keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
                 "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P",
                 "A", "S", "D", "F", "G", "H", "J", "K", "L",
@@ -106,7 +108,15 @@ class RightWindow(QMainWindow):
         left_eye = None
         right_eye = None
 
+        self.previous_direction = "-1"
+        amount_straight_events = 0
+        self.keyboard_selected = "-1"
+
+        self.input_text = ""
+        self.counter = 0
+
         while True:
+            sleep(0.5)
             _, frame_bgr = webcam.read()
             orig_frame = frame_bgr.copy()
             frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
@@ -133,7 +143,7 @@ class RightWindow(QMainWindow):
                 #draw_landmarks(landmarks, orig_frame)
 
 
-            if landmarks is not None:
+            if landmarks is not None and self.counter % 5 == 0:
                 eye_samples = self.segment_eyes(gray, landmarks)
 
                 eye_preds = self.run_eyenet(eye_samples)
@@ -158,11 +168,95 @@ class RightWindow(QMainWindow):
                         gaze[1] = -gaze[1]
                     util.gaze.draw_gaze(orig_frame, ep.landmarks[-2], gaze, length=60.0, thickness=2)
 
-                    if ep.eye_sample.is_left:
-                        print("Left eye gaze: {}".format(gaze))
-                    else:
-                        print("Right eye gaze: {}".format(gaze))
+                    if len(keys_copy) == 1:
+                        engine.say(keys_copy[0])
+                        engine.runAndWait()
+                        
+                        if keys_copy[0] == "Delete":
+                            self.input_text = self.input_text[:-1]
+                        elif keys_copy[0] == 'Space':
+                            self.input_text += " "
+                        elif keys_copy[0] == 'Enter':
+                            self.input_text += "\n"
+                        else:
+                            self.input_text += keys_copy[0]
+                        
+                        self.input_field.setText(self.input_text)
+                        
+                        keys_copy = self.keys.copy()
+                        
+                        self.keyboard_selected = "none"
+                        
+                        text = ""
+                        for i in range(len(keys_copy) // 2):
+                            text += keys_copy[i] + " "
+                        leftKeyboard.setText(text)
+                    
+                    text = ""
+                    for i in range(len(keys_copy) // 2, len(keys_copy)):
+                        text += keys_copy[i] + " "
+                    rightKeyboard.setText(text)
 
+                    if gaze[0] < 0 and gaze[1] < 0:
+                        self.keyboard_selected = "left"
+                        # self.previous_direction = "left"
+                        # amount_straight_events = 0
+                        print("left" + str(gaze))
+                    elif gaze[0] > 0.2 and gaze[1] > 0:
+                        self.keyboard_selected = "right"
+                        # self.previous_direction = "right"
+                        # amount_straight_events = 0
+                        print("right" + str(gaze))
+                    else:
+                        amount_straight_events += 1
+                        if amount_straight_events > 5:
+                            self.keyboard_selected = "none"
+                            # self.previous_direction = "none"
+                            print("none" + str(gaze))
+
+                    if self.keyboard_selected == "right":
+                        if self.previous_direction != self.keyboard_selected:
+                            self.keyboard_selected = "right"
+                            print("right")
+                            keys_copy = keys_copy[len(keys_copy) // 2:]
+                            print(keys_copy)
+                            
+                            text = ""
+                            for i in range(len(keys_copy) // 2):
+                                text += keys_copy[i] + " "
+                            leftKeyboard.setText(text)
+                            
+                            text = ""
+                            for i in range(len(keys_copy) // 2, len(keys_copy)):
+                                text += keys_copy[i] + " "
+                            rightKeyboard.setText(text)
+
+                            self.previous_direction = self.keyboard_selected
+
+                    elif self.keyboard_selected == "left":
+                        if self.previous_direction != self.keyboard_selected:
+                            self.keyboard_selected = "left"
+                            print("left")
+                            keys_copy = keys_copy[:len(keys_copy) // 2]
+                            print(keys_copy)
+                            
+                            text = ""
+                            for i in range(len(keys_copy) // 2):
+                                text += keys_copy[i] + " "
+                            leftKeyboard.setText(text)
+                            
+                            text = ""
+                            for i in range(len(keys_copy) // 2, len(keys_copy)):
+                                text += keys_copy[i] + " "
+                            rightKeyboard.setText(text)
+
+                            self.previous_direction = self.keyboard_selected
+
+                    elif self.keyboard_selected == "none":
+                        self.previous_direction = self.keyboard_selected
+
+
+            self.counter += 1
             self.show()
             cv2.imshow("Webcam", orig_frame)
             key = cv2.waitKey(1)
