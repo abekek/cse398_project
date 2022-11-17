@@ -58,7 +58,7 @@ class RightWindow(QMainWindow):
         self.main_layout.setSpacing(0)
 
         self.input_field = QLineEdit()
-        self.input_field.setStyleSheet("QLineEdit {color: black; font-size: 20px; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
+        self.input_field.setStyleSheet("QLineEdit {color: black; font-size: 30px; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
 
         self.main_layout.addWidget(self.input_field)
 
@@ -74,8 +74,8 @@ class RightWindow(QMainWindow):
 
         self.layoutKeyboard, leftKeyboard, rightKeyboard = self.constructKeyboard(self.keys)
 
-        leftKeyboard.setStyleSheet("QLabel {color: black; font-size: 20px; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
-        rightKeyboard.setStyleSheet("QLabel {color: black; font-size: 20px; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
+        leftKeyboard.setStyleSheet("QLabel {color: black; font-size: 30px; border: 1px solid black; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
+        rightKeyboard.setStyleSheet("QLabel {color: black; font-size: 30px; border: 1px solid black; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
 
         self.main_layout.addLayout(self.layoutKeyboard)
         
@@ -120,7 +120,6 @@ class RightWindow(QMainWindow):
             _, frame_bgr = webcam.read()
             orig_frame = frame_bgr.copy()
             frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-            # frame = cv2.flip(frame, 1)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             faces = face_cascade.detectMultiScale(gray)
 
@@ -132,7 +131,6 @@ class RightWindow(QMainWindow):
                     current_face = next_face
 
             if current_face is not None:
-                #draw_cascade_face(current_face, orig_frame)
                 next_landmarks = self.detect_landmarks(current_face, gray)
 
                 if landmarks is not None:
@@ -140,10 +138,8 @@ class RightWindow(QMainWindow):
                 else:
                     landmarks = next_landmarks
 
-                #draw_landmarks(landmarks, orig_frame)
 
-
-            if landmarks is not None and self.counter % 5 == 0:
+            if landmarks is not None:
                 eye_samples = self.segment_eyes(gray, landmarks)
 
                 eye_preds = self.run_eyenet(eye_samples)
@@ -196,6 +192,8 @@ class RightWindow(QMainWindow):
                     for i in range(len(keys_copy) // 2, len(keys_copy)):
                         text += keys_copy[i] + " "
                     rightKeyboard.setText(text)
+
+                    print(ep.eye_sample.is_left)
 
                     if gaze[0] < 0 and gaze[1] < 0:
                         self.keyboard_selected = "left"

@@ -50,9 +50,6 @@ class LeftWindow(QMainWindow):
             # to open webcab to capture the image
             cap = cv2.VideoCapture(0)
 
-            # self.frames = 0
-            # self.right_keyboard_selection_frames = 0
-            # self.left_keyboard_selection_frames = 0
             self.keyboard_selected = "none"
     
             # set the title
@@ -74,7 +71,7 @@ class LeftWindow(QMainWindow):
             self.main_layout.setSpacing(0)
 
             self.input_field = QLineEdit()
-            self.input_field.setStyleSheet("QLineEdit {color: black; font-size: 20px; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
+            self.input_field.setStyleSheet("QLineEdit {color: black; font-size: 30px; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
 
             self.main_layout.addWidget(self.input_field)
 
@@ -88,8 +85,8 @@ class LeftWindow(QMainWindow):
 
             self.layoutKeyboard, leftKeyboard, rightKeyboard = self.constructKeyboard(self.keys)
 
-            leftKeyboard.setStyleSheet("QLabel {color: black; font-size: 20px; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
-            rightKeyboard.setStyleSheet("QLabel {color: black; font-size: 20px; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
+            leftKeyboard.setStyleSheet("QLabel {color: black; font-size: 30px; border: 1px solid black; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
+            rightKeyboard.setStyleSheet("QLabel {color: black; font-size: 30px; border: 1px solid black; font-weight: bold; margin-bottom: 50px; padding: 10px;}")
 
             self.main_layout.addLayout(self.layoutKeyboard)
             
@@ -99,14 +96,15 @@ class LeftWindow(QMainWindow):
 
             keys_copy = self.keys.copy()
 
-            self.previous_direction = "none"
+            self.previous_direction = "-1"
             amount_straight_events = 0
+
+            count = 0
 
             while True:
                 _, self.frame = cap.read()
                 self.frame = cv2.flip(self.frame, 1)
                 self.rgb_frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
-                # self.frames += 1
 
                 results = face_mesh.process(self.rgb_frame)
                 
@@ -153,6 +151,10 @@ class LeftWindow(QMainWindow):
                 normalized_position_iris_x = (normalized_position_left_iris_x + normalized_position_right_iris_x) / 2.0
 
                 print(normalized_position_iris_x)
+
+                if count < 50:
+                    count += 1
+                    continue
 
                 if len(keys_copy) == 1:
                     engine.say(keys_copy[0])
@@ -243,6 +245,8 @@ class LeftWindow(QMainWindow):
                 #close the webcam when escape key is pressed
                 if key == 27:
                     break
+
+                count += 1
 
             cap.release()
             cv2.destroyAllWindows()
