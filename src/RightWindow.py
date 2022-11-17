@@ -1,6 +1,4 @@
 from asyncio import sleep
-import math
-import sys
 import cv2
 import numpy as np
 import dlib
@@ -92,10 +90,10 @@ class RightWindow(QMainWindow):
         webcam.set(cv2.CAP_PROP_FPS, 60)
 
         dirname = os.path.dirname(__file__)
-        face_cascade = cv2.CascadeClassifier(os.path.join(dirname, 'lbpcascade_frontalface_improved.xml'))
-        self.landmarks_detector = dlib.shape_predictor(os.path.join(dirname, 'shape_predictor_5_face_landmarks.dat'))
+        face_cascade = cv2.CascadeClassifier(os.path.join(dirname, './saved_models/lbpcascade_frontalface_improved.xml'))
+        self.landmarks_detector = dlib.shape_predictor(os.path.join(dirname, './saved_models/shape_predictor_5_face_landmarks.dat'))
 
-        checkpoint = torch.load('checkpoint.pt', map_location=device)
+        checkpoint = torch.load('./saved_models/checkpoint.pt', map_location=device)
         nstack = checkpoint['nstack']
         nfeatures = checkpoint['nfeatures']
         nlandmarks = checkpoint['nlandmarks']

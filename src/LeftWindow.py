@@ -1,6 +1,4 @@
 from asyncio import sleep
-import math
-import sys
 import cv2
 import numpy as np
 import dlib
