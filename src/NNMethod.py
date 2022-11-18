@@ -39,7 +39,7 @@ torch.backends.cudnn.enabled = True
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
-class RightWindow(QMainWindow):
+class NNMethod(QMainWindow):
     def __init__(self):
         super().__init__()
 

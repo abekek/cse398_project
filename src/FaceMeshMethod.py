@@ -24,13 +24,11 @@ import matplotlib.pyplot as plt
 matplotlib.interactive(True)
 import mediapipe as mp
 
-# https://jeanvitor.com/how-to-load-pytorch-models-with-opencv/
-
 
 LEFT_IRIS = [474,475, 476, 477]
 RIGHT_IRIS = [469, 470, 471, 472]
 
-class LeftWindow(QMainWindow):
+class FaceMeshMethod(QMainWindow):
     def __init__(self):
         super().__init__()
 
