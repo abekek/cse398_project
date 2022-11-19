@@ -24,8 +24,6 @@ import matplotlib.pyplot as plt
 matplotlib.interactive(True)
 import mediapipe as mp
 
-# https://jeanvitor.com/how-to-load-pytorch-models-with-opencv/
-
 
 LEFT_IRIS = [37, 38, 39, 40, 41, 42]
 RIGHT_IRIS = [43, 44, 45, 46, 47, 48]
@@ -35,6 +33,7 @@ class CustomLandmarkDetection(QMainWindow):
         super().__init__()
 
         net =  cv2.dnn.readNetFromONNX('./saved_models/resnet18.onnx')
+        # net =  cv2.dnn.readNetFromONNX('./saved_models/model.onnx')
 
         self.font = cv2.FONT_HERSHEY_PLAIN
 
@@ -94,53 +93,81 @@ class CustomLandmarkDetection(QMainWindow):
 
         count = 0
 
+        detector = dlib.get_frontal_face_detector()
+
         while True:
             _, self.frame = cap.read()
             self.frame = cv2.flip(self.frame, 1)
             # self.rgb_frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
 
             image = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-            image = cv2.resize(image, (224, 224))
-            image = np.expand_dims(np.expand_dims(image, axis=0), axis=0)
-            image = image.astype(np.float32)
 
-            # image /= 255.0
+            rects = detector(image, 1)
 
-            net.setInput(image)
+            if len(rects) == 0:
+                continue
+        
+            (x, y, w, h) = self.rect_to_bb(rects[0])
+            cv2.rectangle(self.frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+            crop_img = image[y: y + h, x: x + w]
+
+            print(crop_img.shape)
+
+            blob = cv2.dnn.blobFromImage(crop_img, 1.0 / 255, (224, 224), (0, 0, 0), swapRB=True, crop=False)
+
+            net.setInput(blob)
 
             results = net.forward()
 
             results = np.reshape(results, (68, 2))
 
-            # print(results.shape)
+            results += 0.5
             
             #getting width and height of frame
-            img_h, img_w = self.frame.shape[:2]
-
-            results_reshaped = np.zeros((68, 2))
-
-            # cnt = 0
-            # for i in range(0, 136, 2):
-            #     results_reshaped[cnt, 0] = results[0][i]
-            #     results_reshaped[cnt, 1] = results[0][i + 1]
-            #     cnt += 1
-                
+            img_h, img_w = self.frame.shape[:2]      
 
             print(results.shape)
 
-            mesh_points=np.array([np.multiply([p[0], p[1]], [img_w, img_h]).astype(int) for p in results_reshaped])
+            left_results= results[LEFT_IRIS]
+            right_results = results[RIGHT_IRIS]
 
-            # print(mesh_points[LEFT_IRIS])
+            # print(left_results.shape)
 
-            (l_cx, l_cy), l_radius = cv2.minEnclosingCircle(mesh_points[LEFT_IRIS])
-            (r_cx, r_cy), r_radius = cv2.minEnclosingCircle(mesh_points[RIGHT_IRIS])
+            for i, (x1, y1) in enumerate(results, 1):
+                try:
+                    cv2.circle(self.frame, (int((x1 * w) + x), int((y1 * h) + y)), 2, [40, 117, 255], -1)
+                except:
+                    pass
+
+            # mesh_points=np.array([np.multiply([p[0], p[1]], [w, h]).astype(int) for p in results])
+
+            # print(mesh_points.shape)
+
+            # points_left = np.array([np.multiply([p[0], p[1]], [w, h]).astype(int) for p in left_results])
+            # points_right = np.array([np.multiply([p[0], p[1]], [w, h]).astype(int) for p in right_results])
+
+            # (l_cx, l_cy), l_radius = cv2.minEnclosingCircle(points_left)
+            # (r_cx, r_cy), r_radius = cv2.minEnclosingCircle(points_right)
             
-            # turn center points into np array 
-            center_left = np.array((l_cx, l_cy), dtype=np.int32)
-            center_right = np.array((r_cx, r_cy), dtype=np.int32)
+            # # turn center points into np array 
+            # center_left = np.array((l_cx, l_cy), dtype=np.int32)
+            # center_right = np.array((r_cx, r_cy), dtype=np.int32)
 
-            cv2.circle(self.frame, tuple(center_left), int(l_radius), (255,0,255), 2, cv2.LINE_AA)
-            cv2.circle(self.frame, tuple(center_right), int(r_radius), (255,0,255), 2, cv2.LINE_AA)
+            # cv2.circle(self.frame, tuple(center_left), int(l_radius), (255,0,255), 2, cv2.LINE_AA)
+            # cv2.circle(self.frame, tuple(center_right), int(r_radius), (255,0,255), 2, cv2.LINE_AA)
+
+            # for i, (x1, y1) in enumerate(left_results):
+            #     try:
+            #         cv2.circle(self.frame, (int((x1 * w) + x), int((y1 * h) + y)), 2, [40, 117, 255], -1)
+            #     except:
+            #         pass
+
+            # for i, (x1, y1) in enumerate(right_results):
+            #     try:
+            #         cv2.circle(self.frame, (int((x1 * w) + x), int((y1 * h) + y)), 2, [40, 117, 255], -1)
+            #     except:
+            #         pass
 
             # face_bottom_left = mesh_points[149] # bottom left corner of face
             # face_bottom_right = mesh_points[378]
@@ -266,6 +293,17 @@ class CustomLandmarkDetection(QMainWindow):
 
         cap.release()
         cv2.destroyAllWindows()
+
+    def rect_to_bb(self, rect):
+        # take a bounding predicted by dlib and convert it
+        # to the format (x, y, w, h) as we would normally do
+        # with OpenCV
+        x = rect.left()
+        y = rect.top()
+        w = rect.right() - x
+        h = rect.bottom() - y
+        # return a tuple of (x, y, w, h)
+        return (x, y, w, h)
 
     def normalize(self, val, maxVal, minVal):
         return max(0, min(1, (val - minVal) / (maxVal - minVal)))
