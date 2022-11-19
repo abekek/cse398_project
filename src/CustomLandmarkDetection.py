@@ -25,8 +25,8 @@ matplotlib.interactive(True)
 import mediapipe as mp
 
 
-LEFT_IRIS = [37, 38, 39, 40, 41, 42]
-RIGHT_IRIS = [43, 44, 45, 46, 47, 48]
+LEFT_IRIS = [36, 37, 38, 39, 40, 41]
+RIGHT_IRIS = [42, 43, 44, 45, 46, 47]
 
 class CustomLandmarkDetection(QMainWindow):
     def __init__(self):
@@ -112,8 +112,6 @@ class CustomLandmarkDetection(QMainWindow):
 
             crop_img = image[y: y + h, x: x + w]
 
-            print(crop_img.shape)
-
             blob = cv2.dnn.blobFromImage(crop_img, 1.0 / 255, (224, 224), (0, 0, 0), swapRB=True, crop=False)
 
             net.setInput(blob)
@@ -125,14 +123,10 @@ class CustomLandmarkDetection(QMainWindow):
             results += 0.5
             
             #getting width and height of frame
-            img_h, img_w = self.frame.shape[:2]      
-
-            print(results.shape)
+            img_h, img_w = self.frame.shape[:2]
 
             left_results= results[LEFT_IRIS]
             right_results = results[RIGHT_IRIS]
-
-            # print(left_results.shape)
 
             for i, (x1, y1) in enumerate(results, 1):
                 try:
@@ -140,34 +134,22 @@ class CustomLandmarkDetection(QMainWindow):
                 except:
                     pass
 
-            # mesh_points=np.array([np.multiply([p[0], p[1]], [w, h]).astype(int) for p in results])
+            mesh_points = np.array([np.multiply([p[0], p[1]], [w, h]).astype(int) for p in results])
 
             # print(mesh_points.shape)
 
-            # points_left = np.array([np.multiply([p[0], p[1]], [w, h]).astype(int) for p in left_results])
-            # points_right = np.array([np.multiply([p[0], p[1]], [w, h]).astype(int) for p in right_results])
+            points_left = np.array([np.multiply([p[0], p[1]], [w, h]).astype(int) for p in left_results])
+            points_right = np.array([np.multiply([p[0], p[1]], [w, h]).astype(int) for p in right_results])
 
-            # (l_cx, l_cy), l_radius = cv2.minEnclosingCircle(points_left)
-            # (r_cx, r_cy), r_radius = cv2.minEnclosingCircle(points_right)
+            (l_cx, l_cy), l_radius = cv2.minEnclosingCircle(points_left)
+            (r_cx, r_cy), r_radius = cv2.minEnclosingCircle(points_right)
             
-            # # turn center points into np array 
-            # center_left = np.array((l_cx, l_cy), dtype=np.int32)
-            # center_right = np.array((r_cx, r_cy), dtype=np.int32)
+            # turn center points into np array 
+            center_left = np.array((l_cx + x, l_cy + y), dtype=np.int32)
+            center_right = np.array((r_cx + x, r_cy + y), dtype=np.int32)
 
-            # cv2.circle(self.frame, tuple(center_left), int(l_radius), (255,0,255), 2, cv2.LINE_AA)
-            # cv2.circle(self.frame, tuple(center_right), int(r_radius), (255,0,255), 2, cv2.LINE_AA)
-
-            # for i, (x1, y1) in enumerate(left_results):
-            #     try:
-            #         cv2.circle(self.frame, (int((x1 * w) + x), int((y1 * h) + y)), 2, [40, 117, 255], -1)
-            #     except:
-            #         pass
-
-            # for i, (x1, y1) in enumerate(right_results):
-            #     try:
-            #         cv2.circle(self.frame, (int((x1 * w) + x), int((y1 * h) + y)), 2, [40, 117, 255], -1)
-            #     except:
-            #         pass
+            cv2.circle(self.frame, tuple(center_left), int(l_radius), (255,0,255), 2, cv2.LINE_AA)
+            cv2.circle(self.frame, tuple(center_right), int(r_radius), (255,0,255), 2, cv2.LINE_AA)
 
             # face_bottom_left = mesh_points[149] # bottom left corner of face
             # face_bottom_right = mesh_points[378]
