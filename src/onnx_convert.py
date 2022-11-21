@@ -199,7 +199,7 @@ class Model(nn.Module):
 
 # https://pytorch.org/hub/pytorch_vision_densenet/
 model = Model().to(device)
-model.load_state_dict(torch.load('./saved_models/face_landmarks_64.pth', map_location=device))
+model.load_state_dict(torch.load('./saved_models/face_landmarks_64 (1).pth', map_location=device))
 
 # set the model to inference mode
 model.eval()
@@ -207,4 +207,4 @@ model.eval()
 # Create some sample input in the shape this model expects 
 # This is needed because the convertion forward pass the network once 
 dummy_input = torch.randn(1, 1, 224, 224).cuda()
-torch.onnx.export(model, dummy_input, './saved_models/model_64.onnx', verbose=True)
+torch.onnx.export(model, dummy_input, './saved_models/model_64 (1).onnx', verbose=True)

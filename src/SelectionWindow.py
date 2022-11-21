@@ -38,12 +38,18 @@ class SelectionWindow(QMainWindow):
         self.left_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.left_button.clicked.connect(self.left_button_clicked)
 
-        self.right_button = QPushButton("Handcrafted Method\n(lower precision)")
+        self.center_button = QPushButton("NN Method\n(higher stability)")
+        self.center_button.setStyleSheet(self.button_style)
+        self.center_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.center_button.clicked.connect(self.center_button_clicked)
+
+        self.right_button = QPushButton("Custom Landmark Detection\n(lower precision)")
         self.right_button.setStyleSheet(self.button_style)
         self.right_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.right_button.clicked.connect(self.right_button_clicked)
 
         self.main_layout.addWidget(self.left_button)
+        self.main_layout.addWidget(self.center_button)
         self.main_layout.addWidget(self.right_button)
 
         self.main_widget = QWidget()
@@ -53,12 +59,14 @@ class SelectionWindow(QMainWindow):
         self.show()
 
     def left_button_clicked(self):
-        # open the menu window
         self.menu_window = FaceMeshMethod()
         self.menu_window.show()
 
+    def center_button_clicked(self):
+        self.menu_window = NNMethod()
+        self.menu_window.show()
+
     def right_button_clicked(self):
-        # self.menu_window = NNMethod()
         self.menu_window = CustomLandmarkDetection()
         self.menu_window.show()
         

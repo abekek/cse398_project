@@ -34,6 +34,7 @@ class CustomLandmarkDetection(QMainWindow):
         # net =  cv2.dnn.readNetFromONNX('./saved_models/resnet18.onnx')
         # net =  cv2.dnn.readNetFromONNX('./saved_models/model.onnx')
         net =  cv2.dnn.readNetFromONNX('./saved_models/model_64.onnx')
+        # net =  cv2.dnn.readNetFromONNX('./saved_models/model_64 (1).onnx')
 
         self.font = cv2.FONT_HERSHEY_PLAIN
 
