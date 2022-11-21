@@ -22,7 +22,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 matplotlib.interactive(True)
-import mediapipe as mp
 
 
 LEFT_IRIS = [36, 37, 38, 39, 40, 41]
@@ -32,8 +31,9 @@ class CustomLandmarkDetection(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        net =  cv2.dnn.readNetFromONNX('./saved_models/resnet18.onnx')
+        # net =  cv2.dnn.readNetFromONNX('./saved_models/resnet18.onnx')
         # net =  cv2.dnn.readNetFromONNX('./saved_models/model.onnx')
+        net =  cv2.dnn.readNetFromONNX('./saved_models/model_64.onnx')
 
         self.font = cv2.FONT_HERSHEY_PLAIN
 
@@ -98,22 +98,19 @@ class CustomLandmarkDetection(QMainWindow):
         while True:
             _, self.frame = cap.read()
             self.frame = cv2.flip(self.frame, 1)
-            # self.rgb_frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
 
-            image = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+            self.image = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
 
-            rects = detector(image, 1)
+            rects = detector(self.image, 1)
 
             if len(rects) == 0:
                 continue
         
-            (x, y, w, h) = self.rect_to_bb(rects[0])
-            cv2.rectangle(self.frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-            crop_img = image[y: y + h, x: x + w]
+            (x, y, self.w, self.h) = self.rect_to_bb(rects[0])
+            # cv2.rectangle(self.frame, (x, y), (x + self.w, y + self.h), (0, 255, 0), 2)
+            crop_img = self.image[y: y + self.h, x: x + self.w]
 
             blob = cv2.dnn.blobFromImage(crop_img, 1.0 / 255, (224, 224), (0, 0, 0), swapRB=True, crop=False)
-
             net.setInput(blob)
 
             results = net.forward()
@@ -123,145 +120,118 @@ class CustomLandmarkDetection(QMainWindow):
             results += 0.5
             
             #getting width and height of frame
-            img_h, img_w = self.frame.shape[:2]
+            # img_h, img_w = self.frame.shape[:2]
 
             left_results= results[LEFT_IRIS]
             right_results = results[RIGHT_IRIS]
 
-            for i, (x1, y1) in enumerate(results, 1):
-                try:
-                    cv2.circle(self.frame, (int((x1 * w) + x), int((y1 * h) + y)), 2, [40, 117, 255], -1)
-                except:
-                    pass
+            # for i, (x1, y1) in enumerate(results, 1):
+            #     try:
+            #         cv2.circle(self.frame, (int((x1 * self.w) + x), int((y1 * self.h) + y)), 2, [40, 117, 255], -1)
+            #     except:
+            #         pass
 
-            mesh_points = np.array([np.multiply([p[0], p[1]], [w, h]).astype(int) for p in results])
+            points_left = np.array([np.multiply([p[0], p[1]], [self.w, self.h]).astype(int) for p in left_results])
+            points_right = np.array([np.multiply([p[0], p[1]], [self.w, self.h]).astype(int) for p in right_results])
 
-            # print(mesh_points.shape)
+            points_left += [x, y]
+            points_right += [x, y]
 
-            points_left = np.array([np.multiply([p[0], p[1]], [w, h]).astype(int) for p in left_results])
-            points_right = np.array([np.multiply([p[0], p[1]], [w, h]).astype(int) for p in right_results])
+            cv2.polylines(self.frame, [points_left], True, (0, 0, 255), 2)
+            cv2.polylines(self.frame, [points_right], True, (0, 0, 255), 2)
 
-            (l_cx, l_cy), l_radius = cv2.minEnclosingCircle(points_left)
-            (r_cx, r_cy), r_radius = cv2.minEnclosingCircle(points_right)
-            
-            # turn center points into np array 
-            center_left = np.array((l_cx + x, l_cy + y), dtype=np.int32)
-            center_right = np.array((r_cx + x, r_cy + y), dtype=np.int32)
+            # Detecting gaze to select left or right keybaord.
+            gaze_ratio_left_eye = self.get_gaze_ratio(points_left)
+            gaze_ratio_right_eye = self.get_gaze_ratio(points_right)
+            gaze_ratio = (gaze_ratio_right_eye + gaze_ratio_left_eye) / 2
 
-            cv2.circle(self.frame, tuple(center_left), int(l_radius), (255,0,255), 2, cv2.LINE_AA)
-            cv2.circle(self.frame, tuple(center_right), int(r_radius), (255,0,255), 2, cv2.LINE_AA)
+            print(gaze_ratio)
 
-            # face_bottom_left = mesh_points[149] # bottom left corner of face
-            # face_bottom_right = mesh_points[378]
-            # face_top_left = mesh_points[67]
-            # face_top_right = mesh_points[297] # top right corner of face
-            
-            # face_bottom_left_x = img_w - face_bottom_right[0]
-            # face_bottom_right_x = img_w - face_bottom_left[0] # bottom right corner of face
-            # face_top_right_x = img_w - face_top_left[0]
-            # face_top_left_x = img_w - face_top_right[0]
+            if count < 10:
+                count += 1
+                continue
 
-            # position_left_iris_x = img_w - l_cx
-            # position_right_iris_x = img_w - r_cx
-
-            # print('Left iris: ' + str(position_left_iris_x))
-            # print('Right iris: ' + str(position_right_iris_x))
-
-            # print('Top right X: ' +  str(face_top_right_x))
-            # print('Bottom left X: ' +  str(face_bottom_left_x))
-
-            # normalized_position_left_iris_x = self.normalize(position_left_iris_x, face_top_right_x, face_bottom_left_x)
-            # normalized_position_right_iris_x = self.normalize(position_right_iris_x, face_top_left_x, face_bottom_right_x)
-
-            # normalized_position_iris_x = (normalized_position_left_iris_x + normalized_position_right_iris_x) / 2.0
-
-            # print(normalized_position_iris_x)
-
-            # if count < 50:
-            #     count += 1
-            #     continue
-
-            # if len(keys_copy) == 1:
-            #     engine.say(keys_copy[0])
-            #     engine.runAndWait()
+            if len(keys_copy) == 1:
+                engine.say(keys_copy[0])
+                engine.runAndWait()
                 
-            #     if keys_copy[0] == "Delete":
-            #         self.input_text = self.input_text[:-1]
-            #     elif keys_copy[0] == 'Space':
-            #         self.input_text += " "
-            #     elif keys_copy[0] == 'Enter':
-            #         self.input_text += "\n"
-            #     else:
-            #         self.input_text += keys_copy[0]
+                if keys_copy[0] == "Delete":
+                    self.input_text = self.input_text[:-1]
+                elif keys_copy[0] == 'Space':
+                    self.input_text += " "
+                elif keys_copy[0] == 'Enter':
+                    self.input_text += "\n"
+                else:
+                    self.input_text += keys_copy[0]
                 
-            #     self.input_field.setText(self.input_text)
+                self.input_field.setText(self.input_text)
                 
-            #     keys_copy = self.keys.copy()
+                keys_copy = self.keys.copy()
                 
-            #     self.keyboard_selected = "none"
+                self.keyboard_selected = "none"
                 
-            #     text = ""
-            #     for i in range(len(keys_copy) // 2):
-            #         text += keys_copy[i] + " "
-            #     leftKeyboard.setText(text)
+                text = ""
+                for i in range(len(keys_copy) // 2):
+                    text += keys_copy[i] + " "
+                leftKeyboard.setText(text)
                 
-            #     text = ""
-            #     for i in range(len(keys_copy) // 2, len(keys_copy)):
-            #         text += keys_copy[i] + " "
-            #     rightKeyboard.setText(text)
+                text = ""
+                for i in range(len(keys_copy) // 2, len(keys_copy)):
+                    text += keys_copy[i] + " "
+                rightKeyboard.setText(text)
 
             
-            # if normalized_position_iris_x > 0.09:
-            #     self.keyboard_selected = "right"
-            # elif normalized_position_iris_x < 0.01:
-            #     self.keyboard_selected = "left"
-            # else:
-            #     amount_straight_events += 1
-            #     if amount_straight_events > 8:
-            #         self.keyboard_selected = "none"
-            #         amount_straight_events = 0
-            #     print("none")
+            if gaze_ratio > 1.50:
+                self.keyboard_selected = "right"
+            elif gaze_ratio < 0.7:
+                self.keyboard_selected = "left"
+            else:
+                amount_straight_events += 1
+                if amount_straight_events > 8:
+                    self.keyboard_selected = "none"
+                    amount_straight_events = 0
+                print("none")
 
-            # if self.keyboard_selected == "right":
-            #     if self.previous_direction != self.keyboard_selected:
-            #         self.keyboard_selected = "right"
-            #         print("right")
-            #         keys_copy = keys_copy[len(keys_copy) // 2:]
-            #         print(keys_copy)
+            if self.keyboard_selected == "right":
+                if self.previous_direction != self.keyboard_selected:
+                    self.keyboard_selected = "right"
+                    print("right")
+                    keys_copy = keys_copy[len(keys_copy) // 2:]
+                    print(keys_copy)
                     
-            #         text = ""
-            #         for i in range(len(keys_copy) // 2):
-            #             text += keys_copy[i] + " "
-            #         leftKeyboard.setText(text)
+                    text = ""
+                    for i in range(len(keys_copy) // 2):
+                        text += keys_copy[i] + " "
+                    leftKeyboard.setText(text)
                     
-            #         text = ""
-            #         for i in range(len(keys_copy) // 2, len(keys_copy)):
-            #             text += keys_copy[i] + " "
-            #         rightKeyboard.setText(text)
+                    text = ""
+                    for i in range(len(keys_copy) // 2, len(keys_copy)):
+                        text += keys_copy[i] + " "
+                    rightKeyboard.setText(text)
 
-            #         self.previous_direction = self.keyboard_selected
+                    self.previous_direction = self.keyboard_selected
 
-            # elif self.keyboard_selected == "left":
-            #     if self.previous_direction != self.keyboard_selected:
-            #         self.keyboard_selected = "left"
-            #         print("left")
-            #         keys_copy = keys_copy[:len(keys_copy) // 2]
-            #         print(keys_copy)
+            elif self.keyboard_selected == "left":
+                if self.previous_direction != self.keyboard_selected:
+                    self.keyboard_selected = "left"
+                    print("left")
+                    keys_copy = keys_copy[:len(keys_copy) // 2]
+                    print(keys_copy)
                     
-            #         text = ""
-            #         for i in range(len(keys_copy) // 2):
-            #             text += keys_copy[i] + " "
-            #         leftKeyboard.setText(text)
+                    text = ""
+                    for i in range(len(keys_copy) // 2):
+                        text += keys_copy[i] + " "
+                    leftKeyboard.setText(text)
                     
-            #         text = ""
-            #         for i in range(len(keys_copy) // 2, len(keys_copy)):
-            #             text += keys_copy[i] + " "
-            #         rightKeyboard.setText(text)
+                    text = ""
+                    for i in range(len(keys_copy) // 2, len(keys_copy)):
+                        text += keys_copy[i] + " "
+                    rightKeyboard.setText(text)
 
-            #         self.previous_direction = self.keyboard_selected
+                    self.previous_direction = self.keyboard_selected
 
-            # elif self.keyboard_selected == "none":
-            #     self.previous_direction = self.keyboard_selected
+            elif self.keyboard_selected == "none":
+                self.previous_direction = self.keyboard_selected
             
             self.show()
             cv2.imshow("Frame", self.frame)
@@ -275,6 +245,50 @@ class CustomLandmarkDetection(QMainWindow):
 
         cap.release()
         cv2.destroyAllWindows()
+
+    def get_gaze_ratio(self, eye_region):
+        height, width, _ = self.frame.shape
+    
+        #create the mask to extract xactly the inside of the left eye and exclude all the sorroundings.
+        mask = np.zeros((height, width), np.uint8)
+        cv2.polylines(mask, [eye_region], True, 255, 2)
+        cv2.fillPoly(mask, [eye_region], 255)
+        eye = cv2.bitwise_and(self.image, self.image, mask = mask)
+
+        # cv2.imshow("eye", eye)
+        
+        #We now extract the eye from the face and we put it on his own window.Onlyt we need to keep in mind that wecan only cut
+        #out rectangular shapes from the image, so we take all the extremes points of the eyes to get the rectangle
+        min_x = np.min(eye_region[:, 0])
+        max_x = np.max(eye_region[:, 0])
+        min_y = np.min(eye_region[:, 1])
+        max_y = np.max(eye_region[:, 1])
+        gray_eye = eye[min_y: max_y, min_x: max_x]
+
+        # cv2.imshow("gray_eye", gray_eye)
+        
+        #threshold to seperate iris and pupil from the white part of the eye.
+        _, threshold_eye = cv2.threshold(gray_eye, 70, 255, cv2.THRESH_BINARY)
+
+        cv2.imshow("threshold_eye", threshold_eye)
+        
+        #dividing the eye into 2 parts .left_side and right_side.
+        height, width = threshold_eye.shape
+        left_side_threshold = threshold_eye[0: height, 0: int(width / 2)]
+        left_side_white = cv2.countNonZero(left_side_threshold)
+        right_side_threshold = threshold_eye[0: height, int(width / 2): width]
+        right_side_white = cv2.countNonZero(right_side_threshold)
+        
+        if left_side_white == 0:
+            gaze_ratio = 1
+            
+        elif right_side_white == 0:
+            gaze_ratio = 5
+            
+        else:
+            gaze_ratio = left_side_white / right_side_white
+        return(gaze_ratio)
+
 
     def rect_to_bb(self, rect):
         # take a bounding predicted by dlib and convert it

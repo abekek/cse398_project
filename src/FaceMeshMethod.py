@@ -143,6 +143,9 @@ class FaceMeshMethod(QMainWindow):
                 print('Top right X: ' +  str(face_top_right_x))
                 print('Bottom left X: ' +  str(face_bottom_left_x))
 
+                print('Top left X: ' +  str(face_top_left_x))
+                print('Bottom right X: ' +  str(face_bottom_right_x))
+
                 normalized_position_left_iris_x = self.normalize(position_left_iris_x, face_top_right_x, face_bottom_left_x)
                 normalized_position_right_iris_x = self.normalize(position_right_iris_x, face_top_left_x, face_bottom_right_x)
 
