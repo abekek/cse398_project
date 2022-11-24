@@ -107,11 +107,13 @@ class NNMethod(QMainWindow):
         right_eye = None
 
         self.previous_direction = "-1"
-        amount_straight_events = 0
         self.keyboard_selected = "-1"
 
         self.input_text = ""
         self.counter = 0
+
+        self.num_left_selected = 0
+        self.num_right_selected = 0
 
         while True:
             sleep(0.5)
@@ -193,24 +195,23 @@ class NNMethod(QMainWindow):
 
                     print(ep.eye_sample.is_left)
 
-                    if gaze[0] < 0 and gaze[1] < 0:
+                    if gaze[0] < 0.1 and gaze[1] < 0:
                         self.keyboard_selected = "left"
-                        # self.previous_direction = "left"
-                        # amount_straight_events = 0
+                        self.num_left_selected += 1
+                        self.num_right_selected = 0
                         print("left" + str(gaze))
-                    elif gaze[0] > 0.2 and gaze[1] > 0:
+                    elif gaze[0] > 0 and gaze[1] > 0:
                         self.keyboard_selected = "right"
-                        # self.previous_direction = "right"
-                        # amount_straight_events = 0
+                        self.num_right_selected += 1
+                        self.num_left_selected = 0
                         print("right" + str(gaze))
                     else:
-                        amount_straight_events += 1
-                        if amount_straight_events > 5:
-                            self.keyboard_selected = "none"
-                            # self.previous_direction = "none"
-                            print("none" + str(gaze))
+                        self.keyboard_selected = "none"
+                        print("none" + str(gaze))
+                        self.num_left_selected = 0
+                        self.num_right_selected = 0
 
-                    if self.keyboard_selected == "right":
+                    if self.num_right_selected > 5 and self.keyboard_selected == "right":
                         if self.previous_direction != self.keyboard_selected:
                             self.keyboard_selected = "right"
                             print("right")
@@ -229,7 +230,7 @@ class NNMethod(QMainWindow):
 
                             self.previous_direction = self.keyboard_selected
 
-                    elif self.keyboard_selected == "left":
+                    elif self.num_left_selected > 5 and self.keyboard_selected == "left":
                         if self.previous_direction != self.keyboard_selected:
                             self.keyboard_selected = "left"
                             print("left")
