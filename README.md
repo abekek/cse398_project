@@ -6,7 +6,7 @@ This project is a keyboard that can be controlled by eye-gaze. It is designed fo
 
 ## Training/Inference Pipeline
 
-![Training/Inference Pipeline](./public/img/kEyeBoard%20Steps.drawio.png)
+![Training/Inference Pipeline](./public/img/kEyeBoard%20Steps.drawio.svg)
 
 ## Testing and Demo
 
