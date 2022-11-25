@@ -70,6 +70,7 @@ class NNMethod(QMainWindow):
                 "Z", "X", "C", "V", "B", "N", "M",
                 "Enter", "Space", "Delete"]
 
+        # construct the keyboard layout
         self.layoutKeyboard, leftKeyboard, rightKeyboard = self.constructKeyboard(self.keys)
 
         leftKeyboard.setStyleSheet("QLabel {color: black; font-size: 30px; border: 1px solid black; font-weight: bold; margin-bottom: 50px; padding: 10px;}")

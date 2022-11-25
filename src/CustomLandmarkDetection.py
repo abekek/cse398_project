@@ -108,6 +108,8 @@ class CustomLandmarkDetection(QMainWindow):
                 continue
         
             (x, y, self.w, self.h) = self.rect_to_bb(rects[0])
+
+            # uncomment to detect a face
             # cv2.rectangle(self.frame, (x, y), (x + self.w, y + self.h), (0, 255, 0), 2)
             crop_img = self.image[y: y + self.h, x: x + self.w]
 
