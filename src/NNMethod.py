@@ -64,6 +64,7 @@ class NNMethod(QMainWindow):
 
         engine = pyttsx3.init()
 
+        # keys list
         self.keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
                 "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P",
                 "A", "S", "D", "F", "G", "H", "J", "K", "L",
@@ -82,18 +83,23 @@ class NNMethod(QMainWindow):
 
         self.setCentralWidget(self.widget)
 
+        # make a copy of the initial list
         keys_copy = self.keys.copy()
 
+        # open webcam
         webcam = cv2.VideoCapture(0)
+        # set properties of the frame
         webcam.set(cv2.CAP_PROP_FRAME_WIDTH, 960)
         webcam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         webcam.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         webcam.set(cv2.CAP_PROP_FPS, 60)
 
+        # load the face landmarks model
         dirname = os.path.dirname(__file__)
         face_cascade = cv2.CascadeClassifier(os.path.join(dirname, './saved_models/lbpcascade_frontalface_improved.xml'))
         self.landmarks_detector = dlib.shape_predictor(os.path.join(dirname, './saved_models/shape_predictor_5_face_landmarks.dat'))
 
+        # load the eye-gaze detection model
         checkpoint = torch.load('./saved_models/checkpoint.pt', map_location=device)
         nstack = checkpoint['nstack']
         nfeatures = checkpoint['nfeatures']
@@ -101,29 +107,35 @@ class NNMethod(QMainWindow):
         self.eyenet = EyeNet(nstack=nstack, nfeatures=nfeatures, nlandmarks=nlandmarks).to(device)
         self.eyenet.load_state_dict(checkpoint['model_state_dict'])
 
+        # constants to None
         current_face = None
         landmarks = None
         alpha = 0.95
         left_eye = None
         right_eye = None
 
+        # previous direction and keyboard selected
         self.previous_direction = "-1"
         self.keyboard_selected = "-1"
-
+        
         self.input_text = ""
         self.counter = 0
 
+        # number of left and right direction selected
         self.num_left_selected = 0
         self.num_right_selected = 0
 
         while True:
-            sleep(0.5)
+            sleep(0.5) # delay to reduce the load on the GPU
             _, frame_bgr = webcam.read()
             orig_frame = frame_bgr.copy()
+            
+            # convert the frame to grayscale
             frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             faces = face_cascade.detectMultiScale(gray)
 
+            # if there is a face detected
             if len(faces):
                 next_face = faces[0]
                 if current_face is not None:
@@ -131,6 +143,7 @@ class NNMethod(QMainWindow):
                 else:
                     current_face = next_face
 
+            # if there is a face detected
             if current_face is not None:
                 next_landmarks = self.detect_landmarks(current_face, gray)
 
@@ -140,9 +153,12 @@ class NNMethod(QMainWindow):
                     landmarks = next_landmarks
 
 
+            # if landmarks are detected
             if landmarks is not None:
+                # segment the eyes
                 eye_samples = self.segment_eyes(gray, landmarks)
 
+                # run the eye-gaze detection model
                 eye_preds = self.run_eyenet(eye_samples)
                 left_eyes = list(filter(lambda x: x.eye_sample.is_left, eye_preds))
                 right_eyes = list(filter(lambda x: not x.eye_sample.is_left, eye_preds))
@@ -266,23 +282,29 @@ class NNMethod(QMainWindow):
         cv2.destroyAllWindows()
 
 
-    def detect_landmarks(self, face, frame, scale_x=0, scale_y=0):
+    # code adapted from https://github.com/david-wb/gaze-estimation
+
+    # function to detect the face landmarks
+    def detect_landmarks(self, face, frame):
         (x, y, w, h) = (int(e) for e in face)
         rectangle = dlib.rectangle(x, y, x + w, y + h)
         face_landmarks = self.landmarks_detector(frame, rectangle)
         return face_utils.shape_to_np(face_landmarks)
 
 
+    # function to draw the cascade bounding box
     def draw_cascade_face(self, face, frame):
         (x, y, w, h) = (int(e) for e in face)
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
 
 
+    # function to draw the face landmarks
     def draw_landmarks(self, landmarks, frame):
         for (x, y) in landmarks:
             cv2.circle(frame, (int(x), int(y)), 2, (0, 255, 0), -1, lineType=cv2.LINE_AA)
 
 
+    # function to segment the eye from the face
     def segment_eyes(self, frame, landmarks, ow=160, oh=96):
         eyes = []
 
@@ -330,6 +352,7 @@ class NNMethod(QMainWindow):
                 cv2.imshow('left eye image', eye_image)
             else:
                 cv2.imshow('right eye image', eye_image)
+            
             eyes.append(EyeSample(orig_img=frame.copy(),
                                 img=eye_image,
                                 transform_inv=inv_transform_mat,
@@ -338,6 +361,7 @@ class NNMethod(QMainWindow):
         return eyes
 
 
+    # function to smooth the gaze vector
     def smooth_eye_landmarks(self, eye, prev_eye, smoothing=0.2, gaze_smoothing=0.4):
         if prev_eye is None:
             return eye
@@ -347,34 +371,43 @@ class NNMethod(QMainWindow):
             gaze=gaze_smoothing * prev_eye.gaze + (1 - gaze_smoothing) * eye.gaze)
 
 
+    # function to get the gaze vector
     def run_eyenet(self, eyes, ow=160, oh=96):
         result = []
-        for eye in eyes:
+        for eye in eyes: # iterate over left and right eye
+            
+            # run inference
             with torch.no_grad():
                 x = torch.tensor([eye.img], dtype=torch.float32).to(device)
+
+                # predict landmarks and gaze
                 _, landmarks, gaze = self.eyenet.forward(x)
+                
                 landmarks = np.asarray(landmarks.cpu().numpy()[0])
                 gaze = np.asarray(gaze.cpu().numpy()[0])
-                assert gaze.shape == (2,)
-                assert landmarks.shape == (34, 2)
 
+                # scale landmarks
                 landmarks = landmarks * np.array([oh/48, ow/80])
 
                 temp = np.zeros((34, 3))
+
+                # if left eye, flip landmarks
                 if eye.is_left:
                     temp[:, 0] = ow - landmarks[:, 1]
                 else:
                     temp[:, 0] = landmarks[:, 1]
+                
                 temp[:, 1] = landmarks[:, 0]
                 temp[:, 2] = 1.0
+                
                 landmarks = temp
-                assert landmarks.shape == (34, 3)
                 landmarks = np.asarray(np.matmul(landmarks, eye.transform_inv.T))[:, :2]
-                assert landmarks.shape == (34, 2)
+                
                 result.append(EyePrediction(eye_sample=eye, landmarks=landmarks, gaze=gaze))
         return result
 
 
+    # function to construct the keyboard
     def constructKeyboard(self, keys):
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)

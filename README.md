@@ -10,7 +10,7 @@ This project is a keyboard that can be controlled by eye-gaze. It is designed fo
 
 ## Testing and Demo
 
-The program was tested on Windows 11 laptop with an 7-10750H CPU @ 2.60GHz and an Nvidia GeForce GTX 1650 GPU.
+The program was tested on Windows 11 laptop with an i7-10750H CPU @ 2.60GHz and a Nvidia GeForce GTX 1650 GPU.
 
 To test the program, first install the dependencies:
 

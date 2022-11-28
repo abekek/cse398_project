@@ -44,7 +44,7 @@ class FaceMeshMethod(QMainWindow):
             self.font = cv2.FONT_HERSHEY_PLAIN
             engine = pyttsx3.init()
 
-            # to open webcab to capture the image
+            # to open webcam to capture the image
             cap = cv2.VideoCapture(0)
 
             # keyboard choice
