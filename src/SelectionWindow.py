@@ -55,7 +55,7 @@ class SelectionWindow(QMainWindow):
         # adding the buttons to the main layout
         self.main_layout.addWidget(self.left_button)
         self.main_layout.addWidget(self.center_button)
-        self.main_layout.addWidget(self.right_button)
+        # self.main_layout.addWidget(self.right_button)
 
         # setting the main widget
         self.main_widget = QWidget()

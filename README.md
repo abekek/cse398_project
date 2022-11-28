@@ -8,6 +8,10 @@ This project is a keyboard that can be controlled by eye-gaze. It is designed fo
 
 ![Training/Inference Pipeline](./public/img/kEyeBoard%20Steps.drawio.svg)
 
+## Example Interface
+
+![Example Interface](./public/img/input_done_example.png)
+
 ## Testing and Demo
 
 The program was tested on Windows 11 laptop with an i7-10750H CPU @ 2.60GHz and a Nvidia GeForce GTX 1650 GPU.
